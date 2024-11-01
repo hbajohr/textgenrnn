@@ -9,12 +9,25 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import LabelBinarizer
+from tensorflow import config as config
+from tensorflow.compat.v1.keras.backend import set_session
 from tensorflow.keras.callbacks import LearningRateScheduler
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.text import Tokenizer, text_to_word_sequence
 
-# Remove the v1 compatibility imports
+from .model import textgenrnn_model
+from .model_training import generate_sequences_from_texts
+from .utils import (
+    generate_after_epoch,
+    save_model_weights,
+    textgenrnn_encode_sequence,
+    textgenrnn_generate,
+    textgenrnn_texts_from_file,
+    textgenrnn_texts_from_file_context,
+)
+
+
 class textgenrnn:
     META_TOKEN = '<s>'
     config = {
@@ -44,11 +57,9 @@ class textgenrnn:
                                            'textgenrnn_vocab.json')
 
         if allow_growth is not None:
-            # Updated GPU memory growth setting for TF 2.x
-            gpus = tf.config.list_physical_devices('GPU')
-            if gpus:
-                for gpu in gpus:
-                    tf.config.experimental.set_memory_growth(gpu, True)
+            c = tf.compat.v1.ConfigProto()
+            c.gpu_options.allow_growth = True
+            set_session(tf.compat.v1.Session(config=c))
 
         if config_path is not None:
             with open(config_path, 'r',
@@ -69,8 +80,6 @@ class textgenrnn:
                                       cfg=self.config,
                                       weights_path=weights_path)
         self.indices_char = dict((self.vocab[c], c) for c in self.vocab)
-
-
 
     def generate(self, n=1, return_as_list=False, prefix=None,
                  temperature=[1.0, 0.5, 0.2, 0.2],
@@ -208,23 +217,21 @@ class textgenrnn:
             else:
                 weights_path = "{}_weights.hdf5".format(self.config['name'])
                 self.save(weights_path)
-
-
+            
             if multi_gpu:
-                from tensorflow import distribute as distribute
-                strategy = distribute.MirroredStrategy()
+                strategy = tf.distribute.MirroredStrategy()
                 with strategy.scope():
-                    parallel_model = textgenrnn_model(self.num_classes,
-                                                      dropout=dropout,
-                                                      cfg=self.config,
-                                                      context_size=context_labels.shape[1],
-                                                      weights_path=weights_path)
-                    parallel_model.compile(loss='categorical_crossentropy',
-                                           optimizer=Adam(lr=4e-3))
-                model_t = parallel_model
-                print("Training on {} GPUs.".format(num_gpus))
+                    model_t = textgenrnn_model(
+                        self.num_classes,
+                        cfg=self.config,
+                        weights_path=weights_path
+                    )
+                    model_t.compile(loss='categorical_crossentropy', optimizer=Adam(lr=4e-3))
+                print("Training on {} GPUs.".format(strategy.num_replicas_in_sync))
             else:
                 model_t = self.model
+
+
         else:
             if multi_gpu:
                 from tensorflow import distribute as distribute
