@@ -3,6 +3,7 @@ from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.preprocessing import sequence
 from tensorflow.keras.preprocessing.text import Tokenizer, text_to_word_sequence
 from tensorflow.keras import backend as K
+from tensorflow.keras.optimizers import Adam
 from tensorflow import config as config
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.decomposition import PCA
