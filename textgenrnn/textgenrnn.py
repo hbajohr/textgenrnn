@@ -2,10 +2,6 @@ from tensorflow.keras.callbacks import LearningRateScheduler, Callback
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.preprocessing import sequence
 from tensorflow.keras.preprocessing.text import Tokenizer, text_to_word_sequence
-#from tensorflow.keras.utils import multi_gpu_model
-#from keras.utils import multi_gpu_model
-#from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.optimizers.legacy.Adam import Adam
 from tensorflow.keras import backend as K
 from tensorflow import config as config
 from sklearn.preprocessing import LabelBinarizer
@@ -13,7 +9,6 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics.pairwise import cosine_similarity
 import tensorflow as tf
-#from keras.backend.tensorflow_backend import set_session
 from tensorflow.python.keras.backend import set_session
 import numpy as np
 import json
